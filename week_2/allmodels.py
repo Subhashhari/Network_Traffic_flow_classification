@@ -27,15 +27,14 @@ print("PERFORMANCE EVALUATION OF SECURED NETWORK TRAFFIC CLASSIFICATION")
 print("Using Machine Learning Approach - Replication Study")
 print("=" * 80)
 
-# 1. DATA COLLECTION [cite: page 1, section 3.1.1]
-print("\n[STEP 1] Loading VPN/non-VPN Dataset from Canadian Institute of Cybersecurity...")
+# 1. DATA COLLECTION
+print("\n[STEP 1] Loading VPN/non-VPN Dataset...")
 try:
-    data, meta = arff.loadarff("TimeBasedFeatures-Dataset-15s-VPN.arff")
+    data, meta = arff.loadarff("/kaggle/input/timebasedfeatures-dataset-15s-arff/TimeBasedFeatures-Dataset-15s-VPN.arff")
     df = pd.DataFrame(data)
     print(f"✓ Dataset loaded successfully: {df.shape[0]} samples, {df.shape[1]} features")
 except FileNotFoundError:
-    print("⚠ Dataset file not found. Please download from: https://www.unb.ca/cic/datasets/vpn.html")
-    print("Using synthetic data for demonstration...")
+    print("⚠ Dataset file not found. Using synthetic data for demonstration...")
     # Create synthetic data for demonstration
     np.random.seed(42)
     n_samples = 50000
@@ -43,8 +42,9 @@ except FileNotFoundError:
     df = pd.DataFrame(np.random.randn(n_samples, n_features), 
                      columns=[f'feature_{i}' for i in range(n_features)])
     df['class1'] = np.random.choice(['Non-VPN', 'VPN'], n_samples)
+    print(f"✓ Generated synthetic dataset: {df.shape[0]} samples, {df.shape[1]} features")
 
-# 2. PRE-PROCESSING [cite: page 7, section 3.1.1]
+# 2. PRE-PROCESSING
 print("\n[STEP 2] Data Pre-processing...")
 
 # Decode bytes to strings for nominal attributes
@@ -54,17 +54,17 @@ for col in df.select_dtypes([object]):
     except AttributeError:
         pass  # Already string
 
-# Replace missing values with median [cite: page 7, Data Normalization]
+# Replace missing values with median
 df.replace(-1, np.nan, inplace=True)
 df.fillna(df.median(numeric_only=True), inplace=True)
 print(f"✓ Missing values handled")
 
-# Remove duplicates [cite: page 7, Data Encoding]
+# Remove duplicates
 initial_rows = len(df)
 df.drop_duplicates(inplace=True)
 print(f"✓ Removed {initial_rows - len(df)} duplicate rows")
 
-# Encode class labels: Non-VPN=0, VPN=1 [cite: page 7, Data Encoding]
+# Encode class labels: Non-VPN=0, VPN=1
 label_encoder = LabelEncoder()
 df['class1'] = label_encoder.fit_transform(df['class1'])
 print(f"✓ Class distribution: {dict(df['class1'].value_counts())}")
@@ -73,13 +73,13 @@ print(f"✓ Class distribution: {dict(df['class1'].value_counts())}")
 X = df.drop('class1', axis=1)
 y = df['class1']
 
-# 3. DATA NORMALIZATION [cite: page 7, Equation 1]
+# 3. DATA NORMALIZATION
 print("\n[STEP 3] Min-Max Normalization (scaling to [0,1])...")
 scaler = MinMaxScaler(feature_range=(0, 1))
 X_scaled = scaler.fit_transform(X)
-print(f"✓ {X.shape[1]} features normalized using Equation 1")
+print(f"✓ {X.shape[1]} features normalized")
 
-# 4. TRAIN-TEST SPLIT [cite: page 10, section 5]
+# 4. TRAIN-TEST SPLIT
 print("\n[STEP 4] Splitting dataset (80% train, 20% test)...")
 X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y, test_size=0.2, random_state=42, stratify=y
@@ -87,11 +87,11 @@ X_train, X_test, y_train, y_test = train_test_split(
 print(f"✓ Training set: {X_train.shape[0]} samples")
 print(f"✓ Testing set: {X_test.shape[0]} samples")
 
-# 5. DEFINE ALL CLASSIFIERS [cite: page 2, Table 1 & page 7, section 4]
+# 5. DEFINE ALL CLASSIFIERS
 print("\n[STEP 5] Initializing Machine Learning Classifiers...")
 
 classifiers = {
-    # ENSEMBLE MODELS [cite: page 10, section 4.7]
+    # ENSEMBLE MODELS
     'Random Forest': RandomForestClassifier(
         n_estimators=100,
         criterion='gini',
@@ -122,7 +122,7 @@ classifiers = {
         n_jobs=-1
     ),
     
-    # SINGLE MODELS [cite: page 7, section 4]
+    # SINGLE MODELS
     'Decision Tree': DecisionTreeClassifier(
         criterion='gini',
         max_depth=None,
@@ -131,29 +131,10 @@ classifiers = {
         random_state=42
     ),
     
-    'k-Nearest Neighbors': KNeighborsClassifier(
-        n_neighbors=5,
-        leaf_size=30,
-        metric='minkowski',
-        n_jobs=-1
-    ),
     
-    'Logistic Regression': LogisticRegression(
-        random_state=42,
-        max_iter=200,
-        n_jobs=-1
-    ),
     
     'Naive Bayes': GaussianNB(),
     
-    'Multilayer Perceptron': MLPClassifier(
-        hidden_layer_sizes=(60,),
-        activation='relu',
-        alpha=0.0001,
-        batch_size='auto',
-        max_iter=200,
-        random_state=42
-    ),
     
     'SVM': SVC(
         kernel='rbf',
@@ -164,12 +145,9 @@ classifiers = {
 
 print(f"✓ Initialized {len(classifiers)} classifiers (Ensemble + Single models)")
 
-# 6. FUNCTION TO PLOT LEARNING CURVES [cite: Figures 2-17]
+# 6. FUNCTION TO PLOT LEARNING CURVES
 def plot_learning_curve(estimator, title, X, y, cv=5, train_sizes=np.linspace(0.1, 1.0, 5)):
-    """
-    Generate learning curve plots showing training and cross-validation scores
-    [cite: Figures 2-17 show these curves for all classifiers]
-    """
+    """Generate learning curve plots showing training and cross-validation scores"""
     plt.figure(figsize=(10, 6))
     
     train_sizes, train_scores, test_scores = learning_curve(
@@ -192,7 +170,7 @@ def plot_learning_curve(estimator, title, X, y, cv=5, train_sizes=np.linspace(0.
     
     return plt
 
-# 7. TRAIN AND EVALUATE ALL CLASSIFIERS [cite: page 10-12, section 5]
+# 7. TRAIN AND EVALUATE ALL CLASSIFIERS
 print("\n[STEP 6] Training and Evaluating Classifiers...")
 print("=" * 80)
 
@@ -210,7 +188,7 @@ for name, clf in classifiers.items():
     # Make predictions
     y_pred = clf.predict(X_test)
     
-    # Calculate metrics [cite: page 10, Equations 11-14]
+    # Calculate metrics
     accuracy = accuracy_score(y_test, y_pred)
     precision, recall, f1, support = precision_recall_fscore_support(
         y_test, y_pred, average=None, labels=[0, 1]
@@ -227,7 +205,7 @@ for name, clf in classifiers.items():
         'F1_VPN': f1[1] * 100
     }
     
-    # Calculate ROC curve data [cite: Figure 19]
+    # Calculate ROC curve data
     if hasattr(clf, 'predict_proba'):
         y_pred_proba = clf.predict_proba(X_test)[:, 1]
         fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
@@ -238,14 +216,14 @@ for name, clf in classifiers.items():
     print(f"  VPN - Precision: {precision[1]*100:.2f}%, Recall: {recall[1]*100:.2f}%, F1: {f1[1]*100:.2f}%")
     print(f"  Non-VPN - Precision: {precision[0]*100:.2f}%, Recall: {recall[0]*100:.2f}%, F1: {f1[0]*100:.2f}%")
     
-    # Generate learning curves [cite: Figures 2-17]
+    # Generate learning curves (save to current directory)
     print(f"  Generating learning curves...")
     plt_obj = plot_learning_curve(clf, f'{name} Learning Curve', X_train, y_train)
-    plt_obj.savefig(f'/mnt/user-data/outputs/{name.replace(" ", "_")}_learning_curve.png', 
+    plt_obj.savefig(f'{name.replace(" ", "_")}_learning_curve.png', 
                     dpi=300, bbox_inches='tight')
     plt.close()
 
-# 8. RESULTS COMPARISON TABLE [cite: Table 2, page 15]
+# 8. RESULTS COMPARISON TABLE
 print("\n" + "=" * 80)
 print("COMPARATIVE SUMMARY OF EXPERIMENTAL RESULTS")
 print("=" * 80)
@@ -255,9 +233,10 @@ results_df = results_df.round(2)
 print("\n" + results_df.to_string())
 
 # Save results table
-results_df.to_csv('/mnt/user-data/outputs/comparative_results.csv')
+results_df.to_csv('comparative_results.csv')
+print("\n✓ Saved: comparative_results.csv")
 
-# 9. PLOT ROC CURVES FOR ALL CLASSIFIERS [cite: Figure 19, page 15]
+# 9. PLOT ROC CURVES FOR ALL CLASSIFIERS
 print("\n[STEP 7] Generating ROC Curve Comparison...")
 plt.figure(figsize=(12, 8))
 
@@ -275,10 +254,11 @@ plt.title('ROC Curves - All Classifiers Comparison', fontsize=14, fontweight='bo
 plt.legend(loc='lower right', fontsize=9)
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('/mnt/user-data/outputs/roc_curves_comparison.png', dpi=300, bbox_inches='tight')
+plt.savefig('roc_curves_comparison.png', dpi=300, bbox_inches='tight')
 plt.close()
+print("✓ Saved: roc_curves_comparison.png")
 
-# 10. BAR CHART COMPARISON [cite: Figure 18, page 14]
+# 10. BAR CHART COMPARISON
 print("\n[STEP 8] Generating Performance Comparison Charts...")
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
@@ -316,10 +296,11 @@ ax2.legend()
 ax2.grid(axis='x', alpha=0.3)
 
 plt.tight_layout()
-plt.savefig('/mnt/user-data/outputs/performance_comparison.png', dpi=300, bbox_inches='tight')
+plt.savefig('performance_comparison.png', dpi=300, bbox_inches='tight')
 plt.close()
+print("✓ Saved: performance_comparison.png")
 
-# 11. IDENTIFY BEST PERFORMING MODEL [cite: page 12, section 5.2]
+# 11. IDENTIFY BEST PERFORMING MODEL
 print("\n" + "=" * 80)
 print("BEST PERFORMING MODEL")
 print("=" * 80)
@@ -334,67 +315,53 @@ print(f"   VPN F1-Score: {best_model[1]['F1_VPN']:.2f}%")
 print("\n" + "=" * 80)
 print("ANALYSIS COMPLETE")
 print("=" * 80)
-print(f"\nGenerated files:")
+print(f"\nGenerated files in current directory:")
 print(f"  • {len(classifiers)} learning curve plots")
 print(f"  • ROC curves comparison")
 print(f"  • Performance comparison charts")
 print(f"  • Comparative results CSV")
-print(f"\n[cite: Paper achieved 93.80% with Random Forest]")
+print(f"\n[Paper achieved 93.80% with Random Forest]")
 print(f"Your replication achieved: {results.get('Random Forest', {}).get('Accuracy', 0):.2f}%")
 
 print("\n" + "=" * 80)
 print("RECOMMENDATIONS FOR IMPROVEMENT")
 print("=" * 80)
 print("""
-1. HYPERPARAMETER TUNING [cite: page 2, line 16-17]
+1. HYPERPARAMETER TUNING
    - Use GridSearchCV or RandomizedSearchCV to optimize parameters
    - Random Forest: n_estimators, max_depth, min_samples_split
-   - Gradient Boosting: learning_rate, n_estimators, max_depth
-   - SVM: C, gamma, kernel type
-   
-2. FEATURE ENGINEERING [cite: page 7, Feature Correlation]
-   - Perform feature selection using correlation analysis
-   - Remove highly correlated features (correlation > 0.95)
-   - Use feature importance from Random Forest to select top features
+   - Expected improvement: 2-5% accuracy boost
+
+2. FEATURE ENGINEERING
+   - Perform correlation analysis to remove redundant features
+   - Use feature importance from Random Forest
    - Apply PCA for dimensionality reduction
 
-3. CROSS-VALIDATION [cite: page 10, learning curves use CV=5]
+3. CROSS-VALIDATION
    - Use stratified K-fold cross-validation (K=5 or 10)
-   - Calculate mean and std of metrics across folds
-   - Helps detect overfitting and provides more robust estimates
+   - Provides more robust performance estimates
 
 4. CLASS IMBALANCE HANDLING
-   - Check if dataset is imbalanced
-   - Apply SMOTE (Synthetic Minority Over-sampling Technique)
-   - Use class_weight='balanced' parameter in classifiers
-   
-5. ENSEMBLE METHODS [cite: page 10, section 4.7]
+   - Check class distribution
+   - Apply SMOTE if needed
+   - Use class_weight='balanced' parameter
+
+5. ENSEMBLE METHODS
    - Voting Classifier: Combine predictions from multiple models
    - Stacking: Use meta-learner on top of base classifiers
-   - Paper shows ensemble models (RF, GB) outperform single models
-
-6. DEEP LEARNING [cite: page 4-5, section 2]
+   
+6. DEEP LEARNING
    - Try CNN or LSTM for sequence-based features
-   - Papers mention deep learning achieves better results
-   - Implement attention mechanisms for feature importance
+   - Implement attention mechanisms
 
 7. MODEL INTERPRETABILITY
    - SHAP values for feature importance
    - LIME for local interpretability
-   - Helps understand what features drive VPN vs non-VPN classification
 
-8. TIMEOUT PARAMETER ANALYSIS [cite: page 1, abstract]
-   - Paper mentions performance varies with different timeout values
-   - Test with 5s, 10s, 15s, 30s, 60s, 120s timeout datasets
-   - Analyze which timeout gives best accuracy
-
-9. COMPUTATIONAL EFFICIENCY
-   - Reduce SVM training time by using LinearSVC for large datasets
-   - Use SGDClassifier for very large datasets
-   - Implement parallel processing for ensemble methods
-
-10. VALIDATION ON DIFFERENT DATASETS
-    - Test on Scenario A2, B1, B2 datasets from CIC
-    - Cross-dataset validation to check generalization
-    - Test on encrypted traffic from different VPN providers
+8. TIMEOUT PARAMETER ANALYSIS
+   - Test with different timeout values (5s, 10s, 15s, 30s, 60s, 120s)
+   
+See IMPLEMENTATION_IMPROVEMENTS.md for detailed code examples!
 """)
+
+print("\n✅ All analysis complete! Check current directory for all visualizations.")
